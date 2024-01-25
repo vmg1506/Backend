@@ -1,120 +1,90 @@
-import fs from 'fs';
+import { MODEL_PRODUCTS } from "../../models/product.model.js";
+import { logger } from "../../config/logger_CUSTOM.js";
 
 export default class ProductManager {
-    constructor(path) {
-        this.path = path;
-    }
 
-    isCodeUnique = async code => {
+    async isCodeUnique(code) {
         try {
             const products = await this.getProducts();
             return products.some((product) => product.code === code);
         } catch (error) {
-            console.log(error);
+            logger.error(error);
         }
     }
     
     validateFields(product) {
         return (
-          product.hasOwnProperty('title') &&
-          product.hasOwnProperty('description') &&
-          product.hasOwnProperty('price') &&
-          product.hasOwnProperty('status') &&
-          product.hasOwnProperty('code') &&
-          product.hasOwnProperty('stock') &&
-          product.hasOwnProperty('category') &&
-          typeof product.title === 'string' &&
-          typeof product.description === 'string' &&
-          typeof product.price === 'number' &&
-          typeof product.status === 'boolean' &&
-          typeof product.code === 'string' &&
-          typeof product.stock === 'number' &&
-          typeof product.category === 'string'
+            product.title &&
+            product.description &&
+            typeof product.price === 'number' &&
+            typeof product.status === 'boolean' &&
+            product.code &&
+            typeof product.stock === 'number' &&
+            product.category &&
+            typeof product.title === 'string' &&
+            typeof product.description === 'string' &&
+            typeof product.code === 'string' &&
+            typeof product.category === 'string'
         );
     }
 
-    writeFile = async data => {
-        try {
-            await fs.promises.writeFile(this.path, JSON.stringify(data, null, 2));
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
-    addProduct = async product => {
+    async addProduct(product) {
         try {
             if(await this.isCodeUnique(product.code)) {
-                return {code: 409, status: 'Este producto ya existe'};
+                return { code: 409, status: 'Este producto ya existe' };
             }
             if(!this.validateFields(product)) {
-                return {code: 400, status: 'Todos los campos del producto deben ser ingresados'};
+                return { code: 400, status: 'Todos los campos del producto deben ser ingresados' };
             }
-            let products = await this.getProducts();
-            const newProduct = {
-                ...product,
-                id: products.length > 0 ? products[products.length - 1].id + 1 : 1
-            }
-            products.push(newProduct);
-            await this.writeFile(products);
-            return {code: 200, status: 'Producto agregado', product: newProduct};
+            let result = await MODEL_PRODUCTS.create(product);
+            return { code: 200, status: 'Producto agregado', product: result };
         } catch (error) {
-            console.log(error);
+            logger.error(error);
         }
     }
 
-    getProducts = async() => {
+    async getProducts(optionsQuery, options) {
         try {
-            const products = await fs.promises.readFile(this.path, 'utf-8');
-            return JSON.parse(products);
+            const products = await MODEL_PRODUCTS.paginate(optionsQuery, options);
+            return products;
         } catch (error) {
-            if(error.message.includes('no such file or directory')) return [];
-            console.log(error);
+            logger.error(error);
         }
     }
 
-    getProductById = async id => {
-        const products = await this.getProducts();
+    async getProductById(id) {
         try {
-            const product = products.find(product => product.id === id);
+            const product = await MODEL_PRODUCTS.findById(id);
             return product ? product : false;
         } catch (error) {
-            console.log(error);
+            logger.error(error);
         }
     }
 
-    deleteProductById = async id => {
-        const products = await this.getProducts();
+    async deleteProductById(id) {
         try {
             const product = await this.getProductById(id);
             if(product) {
-                const newProducts = products.filter(product => product.id !== id);
-                await this.writeFile(newProducts);
-                return {code: 200, status: 'Producto eliminado'};
-            }else {
-                return {code: 404, status: 'Producto no existe'};
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
-    updateProduct = async (id, updatedFields) => {
-        let products = await this.getProducts();
-        try {
-            const product = await this.getProductById(id);
-            if(product) {
-                const productIndex = products.findIndex((product) => product.id === id);
-                products[productIndex] = {
-                    ...products[productIndex],
-                    ...updatedFields
-                }
-                await this.writeFile(products);
-                return {code: 200, status: 'Producto actualizado'};
+                await MODEL_PRODUCTS.deleteOne({ _id: id });
+                return { code: 200, status: 'Producto eliminado' };
             } else {
-                return {code: 404, status: 'Producto no encontrado'};
+                return { code: 404, status: 'Producto no existe' };
             }
         } catch (error) {
-            console.log(error);
+            logger.error(error);
+        }
+    }
+
+    async updateProduct(id, updatedFields) {
+        try {
+            const product = await MODEL_PRODUCTS.findByIdAndUpdate(id, updatedFields, { new: true });
+            if(product) {
+                return { code: 200, status: 'Producto actualizado' };
+            } else {
+                return { code: 404, status: 'Producto no encontrado' };
+            }
+        } catch (error) {
+            logger.error(error);
         }
     }
 }
