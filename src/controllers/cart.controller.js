@@ -1,31 +1,16 @@
 import CartManager from "../dao/mongo/cart.service.js";
-import CustomError from "../services/errors/CustomErrors.js";
-import { noFindCartErrorInfo } from "../services/errors/errors.messages.js";
-import { EErrors } from "../services/errors/errorsEnum.js";
 import { generateUniqueTicketCode } from "../utils/generateCode.js";
 
 const manager = new CartManager();
 
 export const getCartControllers = async (req, res) => {
-    try {
-        const { cid } = req.params;
-        const cartProducts = await manager.getProductsOfCartById(cid);
-        if(cartProducts) {
-            res.send({status: "success", payload: cartProducts });
-          }else {
-            CustomError.createError({
-                name: "Find Cart Error",
-                cause: noFindCartErrorInfo(cid),
-                message: "Error buscando carrito",
-                code: EErrors.DATABASE_ERROR
-            })
-          }
-    } catch (error) {
-        console.error(error);
-        res.status(404).json({error: error.code, message: error.message});
+    const { cid } = req.params;
+    const cartProducts = await manager.getProductsOfCartById(cid);
+    if(cartProducts) {
+      res.send({status: "success", payload: cartProducts });
+    }else {
+      res.status(404).json({'error': 'Carrito no encontrado'});
     }
-   
-
 };
 
 export const createCartControllers = async (req, res) => {
