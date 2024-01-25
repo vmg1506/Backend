@@ -28,4 +28,6 @@ router.get("/fail-register", failRegisterControllers);
 
 router.get("/fail-login", failLoginControllers);
 
+router.post("/")
+
 export default router;
