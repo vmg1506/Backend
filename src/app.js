@@ -11,6 +11,8 @@ import envConfig from "./config/env.config.js";
 import MongoSingleton from "./config/mongodb-singleton.js";
 import compression from "express-compression";
 import { addLogger, logger } from "./config/logger_CUSTOM.js";
+import { swaggerSpecs } from "./swaggerSpecs.js";
+import swaggerUi from 'swagger-ui-express';
 
 const app = express();
 const server = http.createServer(app);
@@ -53,6 +55,8 @@ app.use(addLogger);
 
 app.use('/', router);
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+
 io.on('connection', socket => {
     logger.info('Nuevo cliente conectado');
     socket.on('disconnect', () => {
@@ -75,5 +79,7 @@ const connectMongoDB = async (req, res) => {
         logger.error("No se pudo conectar a la BD usando Moongose: " + error);
         process.exit();
     }
+};
+connectMongoDB();
 };
 connectMongoDB();
