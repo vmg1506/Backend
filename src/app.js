@@ -81,5 +81,3 @@ const connectMongoDB = async (req, res) => {
     }
 };
 connectMongoDB();
-};
-connectMongoDB();
